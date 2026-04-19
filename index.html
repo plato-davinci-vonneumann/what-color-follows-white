@@ -1,237 +1,254 @@
-<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
 <meta charset="utf-8">
-<title>50苏轩</title>
+<title>第二球颜色的均值–方差相图</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.b9024aecac666455e183.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #D6D6D6; }
+  body { font-family: 'Helvetica Neue', Arial, 'PingFang SC', 'Noto Sans SC', sans-serif; }
+</style>
+</head>
+<body>
+<div id="preview-app"></div>
+<script>
+(function () {
+  const { useRef, useState, useMemo, useCallback } = React;
+  const h = React.createElement;
 
+  const M = 314;
+  const W = 960, H = 660;
+  const MG = { t: 58, r: 50, b: 78, l: 95 };
+  const IW = W - MG.l - MG.r;
+  const IH = H - MG.t - MG.b;
+  const MU_END = 325, S2_END = 26000;
 
-    
-const M = 314;
-const W = 960, H = 660;
-const MG = { t: 58, r: 50, b: 78, l: 95 };
-const IW = W - MG.l - MG.r;
-const IH = H - MG.t - MG.b;
-const MU_END = 325, S2_END = 26000;
+  const xS = mu => MG.l + (mu / MU_END) * IW;
+  const yS = s2 => MG.t + IH * (1 - s2 / S2_END);
+  const critRaw = mu => mu * (315 - 2 * mu) / 2;
+  const critPos = mu => Math.max(0, critRaw(mu));
+  const popov  = mu => Math.max(0, mu * (M - mu));
 
-const xS = mu => MG.l + (mu / MU_END) * IW;
-const yS = s2 => MG.t + IH * (1 - s2 / S2_END);
-const critRaw = mu => mu * (315 - 2 * mu) / 2;
-const critPos = mu => Math.max(0, critRaw(mu));
-const popov = mu => Math.max(0, mu * (M - mu));
+  function curve(fn, a, b, step = 0.5) {
+    const p = [];
+    for (let t = a; t < b - 0.001; t += step) p.push([xS(t), yS(fn(t))]);
+    p.push([xS(b), yS(fn(b))]);
+    return p;
+  }
+  function pd(pts, close) {
+    return pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ') + (close ? ' Z' : '');
+  }
 
-function curve(fn, a, b, step = 0.5) {
-  const p = [];
-  for (let t = a; t < b - 0.001; t += step) p.push([xS(t), yS(fn(t))]);
-  p.push([xS(b), yS(fn(b))]);
-  return p;
-}
-function pd(pts, close) {
-  return pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ') + (close ? ' Z' : '');
-}
+  const C = {
+    infeasible: '#BEBEBE',
+    white: '#FFFFFF',
+    black: '#141414',
+    parabola: '#D49000',
+    popov: '#4F6AAE',
+    mu157: '#18946E',
+    axis: '#111',
+    grid: '#E0E0E0',
+    ptDark: '#CC2828',
+    ptLight: '#1654BB',
+  };
+  const FONT = "'Helvetica Neue',Arial,'PingFang SC','Noto Sans SC',sans-serif";
 
-const C = {
-  infeasible: '#BEBEBE',
-  white: '#FFFFFF',
-  black: '#141414',
-  parabola: '#D49000',
-  popov: '#4F6AAE',
-  mu157: '#18946E',
-  axis: '#111',
-  grid: '#E0E0E0',
-  ptDark: '#CC2828',
-  ptLight: '#1654BB',
-};
-const FONT = "'Helvetica Neue',Arial,'PingFang SC','Noto Sans SC',sans-serif";
+  function Halo(props) {
+    const { children, color = '#fff', width = 3, style, ...rest } = props;
+    return h('text', {
+      ...rest,
+      style: { paintOrder: 'stroke', ...(style || {}) },
+      stroke: color,
+      strokeWidth: width,
+      strokeLinejoin: 'round'
+    }, children);
+  }
 
-function Halo({ children, color = '#fff', width = 3, ...props }) {
-  return (
-    _react2.default.createElement('text', { ...props, style: { paintOrder: 'stroke', ...props.style }, stroke: color, strokeWidth: width, strokeLinejoin: "round",}
-      , children
-    )
-  );
-}
+  function PhaseDiagram() {
+    const svgRef = useRef(null);
+    const [tip, setTip] = useState(null);
 
- function PhaseDiagram() {
-  const svgRef = _react.useRef.call(void 0, null);
-  const [tip, setTip] = _react.useState.call(void 0, null);
+    const paths = useMemo(() => {
+      const cPts = curve(critPos, 0, 157.5);
+      const pPts = curve(popov, 0, M);
+      return {
+        darkD: pd([[xS(0), yS(0)], ...cPts, [xS(157.5), yS(0)]], true),
+        lightD: pd([...pPts, [xS(M), yS(0)], [xS(157.5), yS(0)], ...cPts.slice().reverse()], true),
+        cLine: pd(cPts),
+        pLine: pd(pPts),
+      };
+    }, []);
 
-  const paths = _react.useMemo.call(void 0, () => {
-    const cPts = curve(critPos, 0, 157.5);
-    const pPts = curve(popov, 0, M);
-    return {
-      darkD: pd([[xS(0), yS(0)], ...cPts, [xS(157.5), yS(0)]], true),
-      lightD: pd([...pPts, [xS(M), yS(0)], [xS(157.5), yS(0)], ...cPts.slice().reverse()], true),
-      cLine: pd(cPts),
-      pLine: pd(pPts),
-    };
-  }, []);
+    const onMouse = useCallback(e => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const r = svg.getBoundingClientRect();
+      const sx = (e.clientX - r.left) / r.width * W;
+      const sy = (e.clientY - r.top) / r.height * H;
+      const mu = (sx - MG.l) / IW * MU_END;
+      const s2 = (1 - (sy - MG.t) / IH) * S2_END;
+      if (mu < 0.3 || mu > M + 2 || s2 < -400) return setTip(null);
+      const pMax = popov(Math.min(mu, M));
+      if (s2 > pMax + 500) return setTip(null);
+      const s2c = Math.max(0, Math.min(s2, pMax));
+      const muStar = mu + s2c / mu;
+      const p = Math.max(0, Math.min(1, (muStar - 1) / (M - 1)));
+      const sc = critRaw(mu);
+      const rg = s2c > sc + 5 ? '偏白' : s2c < sc - 5 ? '偏黑' : '平衡';
+      setTip({ mu, s2: s2c, muStar, p, rg, sx, sy });
+    }, []);
 
-  const onMouse = _react.useCallback.call(void 0, e => {
-    const svg = svgRef.current;
-    if (!svg) return;
-    const r = svg.getBoundingClientRect();
-    const sx = (e.clientX - r.left) / r.width * W;
-    const sy = (e.clientY - r.top) / r.height * H;
-    const mu = (sx - MG.l) / IW * MU_END;
-    const s2 = (1 - (sy - MG.t) / IH) * S2_END;
-    if (mu < 0.3 || mu > M + 2 || s2 < -400) return setTip(null);
-    const pMax = popov(Math.min(mu, M));
-    if (s2 > pMax + 500) return setTip(null);
-    const s2c = Math.max(0, Math.min(s2, pMax));
-    const muStar = mu + s2c / mu;
-    const p = Math.max(0, Math.min(1, (muStar - 1) / (M - 1)));
-    const sc = critRaw(mu);
-    const rg = s2c > sc + 5 ? '偏白' : s2c < sc - 5 ? '偏黑' : '平衡';
-    setTip({ mu, s2: s2c, muStar, p, rg, sx, sy });
-  }, []);
+    const ay = yS(0);
+    const muTicks = [0, 50, 100, 200, 250, M];
+    const s2Ticks = [0, 5000, 10000, 15000, 20000, 25000];
 
-  const ay = yS(0);
-  const muTicks = [0, 50, 100, 200, 250, M];
-  const s2Ticks = [0, 5000, 10000, 15000, 20000, 25000];
-
-  return (
-    _react2.default.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', padding: '12px 8px', background: '#D6D6D6' },}
-      , _react2.default.createElement('svg', {
+    return h('div', {
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', padding: '12px 8px', background: '#D6D6D6' }
+    },
+      h('svg', {
         ref: svgRef,
         viewBox: `0 0 ${W} ${H}`,
         style: { width: '100%', maxWidth: '960px', cursor: 'crosshair', userSelect: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.18)', borderRadius: '6px', background: '#D6D6D6' },
         onMouseMove: onMouse,
         onMouseLeave: () => setTip(null),
-        fontFamily: FONT,}
-
+        fontFamily: FONT
+      },
         /* Infeasible background */
-        , _react2.default.createElement('rect', { x: MG.l, y: MG.t, width: IW, height: IH, fill: C.infeasible, rx: "2",} )
+        h('rect', { x: MG.l, y: MG.t, width: IW, height: IH, fill: C.infeasible, rx: '2' }),
 
         /* Regions */
-        , _react2.default.createElement('path', { d: paths.lightD, fill: C.white,} )
-        , _react2.default.createElement('path', { d: paths.darkD, fill: C.black,} )
+        h('path', { d: paths.lightD, fill: C.white }),
+        h('path', { d: paths.darkD, fill: C.black }),
 
         /* Grid */
-        , muTicks.map(t => _react2.default.createElement('line', { key: 'gx' + t, x1: xS(t), x2: xS(t), y1: MG.t, y2: ay, stroke: C.grid, strokeWidth: 0.5,} ))
-        , s2Ticks.map(t => _react2.default.createElement('line', { key: 'gy' + t, x1: MG.l, x2: MG.l + IW, y1: yS(t), y2: yS(t), stroke: C.grid, strokeWidth: 0.5,} ))
+        muTicks.map(t => h('line', { key: 'gx' + t, x1: xS(t), x2: xS(t), y1: MG.t, y2: ay, stroke: C.grid, strokeWidth: 0.5 })),
+        s2Ticks.map(t => h('line', { key: 'gy' + t, x1: MG.l, x2: MG.l + IW, y1: yS(t), y2: yS(t), stroke: C.grid, strokeWidth: 0.5 })),
 
         /* μ = 157.5 vertical */
-        , _react2.default.createElement('line', { x1: xS(157.5), x2: xS(157.5), y1: MG.t, y2: ay, stroke: C.mu157, strokeWidth: 2.2, strokeDasharray: "8 5" ,} )
+        h('line', { x1: xS(157.5), x2: xS(157.5), y1: MG.t, y2: ay, stroke: C.mu157, strokeWidth: 2.2, strokeDasharray: '8 5' }),
 
         /* Popoviciu bound */
-        , _react2.default.createElement('path', { d: paths.pLine, fill: "none", stroke: C.popov, strokeWidth: 2.5, strokeDasharray: "10 5" ,} )
+        h('path', { d: paths.pLine, fill: 'none', stroke: C.popov, strokeWidth: 2.5, strokeDasharray: '10 5' }),
 
         /* Critical parabola */
-        , _react2.default.createElement('path', { d: paths.cLine, fill: "none", stroke: C.parabola, strokeWidth: 3.5,} )
+        h('path', { d: paths.cLine, fill: 'none', stroke: C.parabola, strokeWidth: 3.5 }),
 
         /* ====== Region Labels ====== */
-        /* 偏白区 — black text on white background */
-        , _react2.default.createElement('text', { x: xS(100), y: yS(15800), fill: "#000000", fontSize: "42", fontWeight: "900", textAnchor: "middle",}, "偏白区")
-        , _react2.default.createElement('text', { x: xS(100), y: yS(15800) + 32, fill: "#000000", fontSize: "16", textAnchor: "middle",}, 'P(W\u2082=\u767D | W\u2081=\u767D) > \u00BD')
+        h('text', { x: xS(100), y: yS(15800), fill: '#000000', fontSize: '42', fontWeight: '900', textAnchor: 'middle' }, '偏白区'),
+        h('text', { x: xS(100), y: yS(15800) + 32, fill: '#000000', fontSize: '16', textAnchor: 'middle' }, 'P(W₂=白 | W₁=白) > ½'),
 
-        /* 偏黑区 — black text with white halo on dark background */
-        , _react2.default.createElement(Halo, { x: xS(58), y: yS(2900), fill: "#000000", fontSize: "26", fontWeight: "900", textAnchor: "middle", color: "#ffffff", width: 5,}, "偏黑区")
-        , _react2.default.createElement(Halo, { x: xS(58), y: yS(2900) + 22, fill: "#000000", fontSize: "14", textAnchor: "middle", color: "#ffffff", width: 4,}, 'P(W\u2082=\u767D | W\u2081=\u767D) < \u00BD')
+        h(Halo, { x: xS(58), y: yS(2900), fill: '#000000', fontSize: '26', fontWeight: '900', textAnchor: 'middle', color: '#ffffff', width: 5 }, '偏黑区'),
+        h(Halo, { x: xS(58), y: yS(2900) + 22, fill: '#000000', fontSize: '14', textAnchor: 'middle', color: '#ffffff', width: 4 }, 'P(W₂=白 | W₁=白) < ½'),
 
         /* 不可行域 */
-        , _react2.default.createElement('text', { x: xS(258), y: yS(22500), fill: "#969696", fontSize: "15", fontWeight: "600", textAnchor: "middle",}, "不可行域")
+        h('text', { x: xS(258), y: yS(22500), fill: '#969696', fontSize: '15', fontWeight: '600', textAnchor: 'middle' }, '不可行域'),
 
         /* Critical parabola annotation */
-        , _react2.default.createElement(Halo, { x: xS(40), y: yS(critPos(40)) - 21, fill: "#A97200", fontSize: "15", fontWeight: "700", textAnchor: "middle", color: "#fff", width: 4,}, "临界抛物线")
-        , _react2.default.createElement(Halo, { x: xS(40), y: yS(critPos(40)) - 4, fill: "#A97200", fontSize: "12.5", textAnchor: "middle", color: "#fff", width: 3,}, 'σ\u00B2 = μ(315\u22122μ)/2')
+        h(Halo, { x: xS(40), y: yS(critPos(40)) - 21, fill: '#A97200', fontSize: '15', fontWeight: '700', textAnchor: 'middle', color: '#fff', width: 4 }, '临界抛物线'),
+        h(Halo, { x: xS(40), y: yS(critPos(40)) - 4, fill: '#A97200', fontSize: '12.5', textAnchor: 'middle', color: '#fff', width: 3 }, 'σ² = μ(315−2μ)/2'),
 
         /* Popoviciu annotation */
-        , _react2.default.createElement(Halo, { x: xS(265), y: yS(popov(265)) - 17, fill: C.popov, fontSize: "15", fontWeight: "700", textAnchor: "middle", color: "#fff", width: 3.5,}, "波波维奇亚上界")
-        , _react2.default.createElement(Halo, { x: xS(265), y: yS(popov(265)) + 1, fill: C.popov, fontSize: "12.5", textAnchor: "middle", color: "#fff", width: 3,}, 'σ\u00B2 = μ(314\u2212μ)')
+        h(Halo, { x: xS(265), y: yS(popov(265)) - 17, fill: C.popov, fontSize: '15', fontWeight: '700', textAnchor: 'middle', color: '#fff', width: 3.5 }, '波波维奇亚上界'),
+        h(Halo, { x: xS(265), y: yS(popov(265)) + 1, fill: C.popov, fontSize: '12.5', textAnchor: 'middle', color: '#fff', width: 3 }, 'σ² = μ(314−μ)'),
 
         /* μ = 157.5 annotation */
-        , _react2.default.createElement(Halo, { x: xS(157.5) - 10, y: MG.t + 20, fill: C.mu157, fontSize: "14", fontWeight: "700", textAnchor: "end", color: "#fff", width: 3.5,}, "μ = 157.5"  )
+        h(Halo, { x: xS(157.5) - 10, y: MG.t + 20, fill: C.mu157, fontSize: '14', fontWeight: '700', textAnchor: 'end', color: '#fff', width: 3.5 }, 'μ = 157.5'),
 
         /* Vertex */
-        , _react2.default.createElement('circle', { cx: xS(78.75), cy: yS(6201.5625), r: 5, fill: C.parabola, stroke: "#fff", strokeWidth: 2,} )
-        , _react2.default.createElement(Halo, { x: xS(78.75) + 10, y: yS(6201.5625) + 5, fill: "#8B6500", fontSize: "12", fontWeight: "600", color: "#fff", width: 3,}, "顶点 (P = 50%，μ∗ = 157.5，σ^2 ≈ 6202)"       )
+        h('circle', { cx: xS(78.75), cy: yS(6201.5625), r: 5, fill: C.parabola, stroke: '#fff', strokeWidth: 2 }),
+        h(Halo, { x: xS(78.75) + 10, y: yS(6201.5625) + 5, fill: '#8B6500', fontSize: '12', fontWeight: '600', color: '#fff', width: 3 }, '顶点 (P = 50%，μ∗ = 157.5，σ² ≈ 6202)'),
 
         /* Connection line */
-        , _react2.default.createElement('line', { x1: xS(157), x2: xS(157), y1: yS(600), y2: yS(24000), stroke: "#999", strokeWidth: 1.3, strokeDasharray: "5 4" ,} )
+        h('line', { x1: xS(157), x2: xS(157), y1: yS(600), y2: yS(24000), stroke: '#999', strokeWidth: 1.3, strokeDasharray: '5 4' }),
 
         /* §2.1 */
-        , _react2.default.createElement('circle', { cx: xS(157), cy: yS(0), r: 8.5, fill: C.ptDark, stroke: "#fff", strokeWidth: 3,} )
-        , _react2.default.createElement(Halo, { x: xS(157) + 15, y: ay - 26, fill: C.ptDark, fontSize: "15", fontWeight: "700", color: "#fff", width: 3.5,}, '§2.1  确定 k = 157')
-        , _react2.default.createElement(Halo, { x: xS(157) + 15, y: ay - 8, fill: "#555", fontSize: "13", fontWeight: "500", color: "#fff", width: 3,}, 'σ\u00B2 = 0，P \u2248 49.8%（偏黑）')
+        h('circle', { cx: xS(157), cy: yS(0), r: 8.5, fill: C.ptDark, stroke: '#fff', strokeWidth: 3 }),
+        h(Halo, { x: xS(157) + 15, y: ay - 26, fill: C.ptDark, fontSize: '15', fontWeight: '700', color: '#fff', width: 3.5 }, '§2.1  确定 k = 157'),
+        h(Halo, { x: xS(157) + 15, y: ay - 8, fill: '#555', fontSize: '13', fontWeight: '500', color: '#fff', width: 3 }, 'σ² = 0，P ≈ 49.8%（偏黑）'),
 
         /* §2.2 */
-        , _react2.default.createElement('circle', { cx: xS(157), cy: yS(24649), r: 8.5, fill: C.ptLight, stroke: "#fff", strokeWidth: 3,} )
-        , _react2.default.createElement(Halo, { x: xS(157) + 15, y: yS(24649) + 6, fill: C.ptLight, fontSize: "15", fontWeight: "700", color: "#fff", width: 3.5,}, '§2.2  全白或全黑')
-        , _react2.default.createElement(Halo, { x: xS(157) + 15, y: yS(24649) + 25, fill: "#555", fontSize: "13", fontWeight: "500", color: "#fff", width: 3,}, 'σ\u00B2 = 24649，P = 100%（偏白）')
+        h('circle', { cx: xS(157), cy: yS(24649), r: 8.5, fill: C.ptLight, stroke: '#fff', strokeWidth: 3 }),
+        h(Halo, { x: xS(157) + 15, y: yS(24649) + 6, fill: C.ptLight, fontSize: '15', fontWeight: '700', color: '#fff', width: 3.5 }, '§2.2  全白或全黑'),
+        h(Halo, { x: xS(157) + 15, y: yS(24649) + 25, fill: '#555', fontSize: '13', fontWeight: '500', color: '#fff', width: 3 }, 'σ² = 24649，P = 100%（偏白）'),
 
         /* Axes */
-        , _react2.default.createElement('line', { x1: MG.l, x2: MG.l + IW, y1: ay, y2: ay, stroke: C.axis, strokeWidth: 2,} )
-        , _react2.default.createElement('line', { x1: MG.l, x2: MG.l, y1: MG.t, y2: ay, stroke: C.axis, strokeWidth: 2,} )
+        h('line', { x1: MG.l, x2: MG.l + IW, y1: ay, y2: ay, stroke: C.axis, strokeWidth: 2 }),
+        h('line', { x1: MG.l, x2: MG.l, y1: MG.t, y2: ay, stroke: C.axis, strokeWidth: 2 }),
 
         /* X ticks */
-        , muTicks.map(t => (
-          _react2.default.createElement('g', { key: 'tx' + t,}
-            , _react2.default.createElement('line', { x1: xS(t), x2: xS(t), y1: ay, y2: ay + 7, stroke: C.axis, strokeWidth: 1.5,} )
-            , _react2.default.createElement('text', { x: xS(t), y: ay + 23, fill: "#333", fontSize: "13", fontWeight: "500", textAnchor: "middle",}, t)
-          )
-        ))
-        , _react2.default.createElement('line', { x1: xS(157.5), x2: xS(157.5), y1: ay, y2: ay + 5, stroke: C.mu157, strokeWidth: 1.5,} )
-        , _react2.default.createElement('text', { x: xS(157.5), y: ay + 23, fill: C.mu157, fontSize: "12", fontWeight: "600", textAnchor: "middle",}, "157.5")
+        muTicks.map(t => h('g', { key: 'tx' + t },
+          h('line', { x1: xS(t), x2: xS(t), y1: ay, y2: ay + 7, stroke: C.axis, strokeWidth: 1.5 }),
+          h('text', { x: xS(t), y: ay + 23, fill: '#333', fontSize: '13', fontWeight: '500', textAnchor: 'middle' }, t)
+        )),
+        h('line', { x1: xS(157.5), x2: xS(157.5), y1: ay, y2: ay + 5, stroke: C.mu157, strokeWidth: 1.5 }),
+        h('text', { x: xS(157.5), y: ay + 23, fill: C.mu157, fontSize: '12', fontWeight: '600', textAnchor: 'middle' }, '157.5'),
 
         /* Y ticks */
-        , s2Ticks.map(t => (
-          _react2.default.createElement('g', { key: 'ty' + t,}
-            , _react2.default.createElement('line', { x1: MG.l - 7, x2: MG.l, y1: yS(t), y2: yS(t), stroke: C.axis, strokeWidth: 1.5,} )
-            , _react2.default.createElement('text', { x: MG.l - 12, y: yS(t) + 5, fill: "#333", fontSize: "13", fontWeight: "500", textAnchor: "end",}, t === 0 ? '0' : (t / 1000) + 'k')
-          )
-        ))
+        s2Ticks.map(t => h('g', { key: 'ty' + t },
+          h('line', { x1: MG.l - 7, x2: MG.l, y1: yS(t), y2: yS(t), stroke: C.axis, strokeWidth: 1.5 }),
+          h('text', { x: MG.l - 12, y: yS(t) + 5, fill: '#333', fontSize: '13', fontWeight: '500', textAnchor: 'end' }, t === 0 ? '0' : (t / 1000) + 'k')
+        )),
 
         /* Axis titles */
-        , _react2.default.createElement('text', { x: MG.l + IW / 2, y: H - 10, fill: "#222", fontSize: "17", fontWeight: "600", textAnchor: "middle",}, "μ（白球数均值）")
-        , _react2.default.createElement('text', { x: 22, y: MG.t + IH / 2, fill: "#222", fontSize: "17", fontWeight: "600", textAnchor: "middle", transform: `rotate(-90,22,${MG.t + IH / 2})`,}, "σ²（白球数方差）")
+        h('text', { x: MG.l + IW / 2, y: H - 10, fill: '#222', fontSize: '17', fontWeight: '600', textAnchor: 'middle' }, 'μ（白球数均值）'),
+        h('text', { x: 22, y: MG.t + IH / 2, fill: '#222', fontSize: '17', fontWeight: '600', textAnchor: 'middle', transform: `rotate(-90,22,${MG.t + IH / 2})` }, 'σ²（白球数方差）'),
 
         /* Title */
-        , _react2.default.createElement('text', { x: W / 2, y: 26, fill: "#111", fontSize: "22", fontWeight: "800", textAnchor: "middle",}, "第二球颜色的均值–方差相图")
-        /* Subtitle — RED */
-        , _react2.default.createElement('text', { x: W / 2, y: 46, fill: "#CC2222", fontSize: "14", fontWeight: "500", textAnchor: "middle",}, "M = 314 ｜ 第一球为白色 ｜ 鼠标悬停查看条件概率"      )
+        h('text', { x: W / 2, y: 26, fill: '#111', fontSize: '22', fontWeight: '800', textAnchor: 'middle' }, '第二球颜色的均值–方差相图'),
+        h('text', { x: W / 2, y: 46, fill: '#CC2222', fontSize: '14', fontWeight: '500', textAnchor: 'middle' }, 'M = 314 ｜ 第一球为白色 ｜ 鼠标悬停查看条件概率'),
 
         /* Hover crosshair */
-        , tip && (
-          _react2.default.createElement('g', null
-            , _react2.default.createElement('line', { x1: tip.sx, x2: tip.sx, y1: MG.t, y2: ay, stroke: "#444", strokeWidth: 0.7, strokeDasharray: "4 3" , opacity: 0.4,} )
-            , _react2.default.createElement('line', { x1: MG.l, x2: MG.l + IW, y1: tip.sy, y2: tip.sy, stroke: "#444", strokeWidth: 0.7, strokeDasharray: "4 3" , opacity: 0.4,} )
-            , _react2.default.createElement('circle', { cx: tip.sx, cy: tip.sy, r: 5.5, fill: "none", stroke: "#222", strokeWidth: 2.2,} )
-          )
+        tip && h('g', null,
+          h('line', { x1: tip.sx, x2: tip.sx, y1: MG.t, y2: ay, stroke: '#444', strokeWidth: 0.7, strokeDasharray: '4 3', opacity: 0.4 }),
+          h('line', { x1: MG.l, x2: MG.l + IW, y1: tip.sy, y2: tip.sy, stroke: '#444', strokeWidth: 0.7, strokeDasharray: '4 3', opacity: 0.4 }),
+          h('circle', { cx: tip.sx, cy: tip.sy, r: 5.5, fill: 'none', stroke: '#222', strokeWidth: 2.2 })
         )
-      )
+      ),
 
       /* Tooltip bar */
-      , _react2.default.createElement('div', { style: { height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px', width: '100%', maxWidth: '960px' },}
-        , tip ? (
-          _react2.default.createElement('div', { style: { padding: '6px 18px', background: '#1A1A1A', color: '#EEE', borderRadius: '8px', fontSize: '14px', fontFamily: "'SF Mono','Fira Code',monospace", whiteSpace: 'nowrap', letterSpacing: '0.3px' },}, "μ="
-            , tip.mu.toFixed(1), "　σ²=", tip.s2.toFixed(0), "　μ*=", tip.muStar.toFixed(1), "　P(W₂=白|W₁=白)=", (tip.p * 100).toFixed(1), "%　"
-            , _react2.default.createElement('span', { style: { fontWeight: 'bold', color: tip.rg === '偏白' ? '#7DD3FC' : tip.rg === '偏黑' ? '#FCA5A5' : '#FDE68A' },}, tip.rg)
-          )
-        ) : (
-          /* Placeholder — BLUE */
-          _react2.default.createElement('span', { style: { color: '#1654BB', fontSize: '14px', fontWeight: '500' },}, "鼠标悬停图中查看任意 (μ, σ²) 对应的条件概率"   )
+      h('div', {
+        style: { height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: '8px', width: '100%', maxWidth: '960px' }
+      },
+        tip
+          ? h('div', {
+              style: { padding: '6px 18px', background: '#1A1A1A', color: '#EEE', borderRadius: '8px', fontSize: '14px', fontFamily: "'SF Mono','Fira Code',monospace", whiteSpace: 'nowrap', letterSpacing: '0.3px' }
+            },
+              'μ=', tip.mu.toFixed(1), '　σ²=', tip.s2.toFixed(0), '　μ*=', tip.muStar.toFixed(1),
+              '　P(W₂=白|W₁=白)=', (tip.p * 100).toFixed(1), '%　',
+              h('span', {
+                style: { fontWeight: 'bold', color: tip.rg === '偏白' ? '#7DD3FC' : tip.rg === '偏黑' ? '#FCA5A5' : '#FDE68A' }
+              }, tip.rg)
+            )
+          : h('span', {
+              style: { color: '#1654BB', fontSize: '14px', fontWeight: '500' }
+            }, '鼠标悬停图中查看任意 (μ, σ²) 对应的条件概率')
+      ),
+
+      /* Legend */
+      h('div', {
+        style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', marginTop: '12px', fontSize: '14px', color: '#444', fontWeight: '500' }
+      },
+        h('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+          h('span', { style: { display: 'inline-block', width: '20px', height: '14px', background: '#fff', border: '2px solid #999', borderRadius: '3px' } }), '偏白区'
+        ),
+        h('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+          h('span', { style: { display: 'inline-block', width: '20px', height: '14px', background: C.black, borderRadius: '3px' } }), '偏黑区'
+        ),
+        h('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+          h('span', { style: { display: 'inline-block', width: '22px', borderTop: `3.5px solid ${C.parabola}` } }), '临界抛物线'
+        ),
+        h('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+          h('span', { style: { display: 'inline-block', width: '22px', borderTop: `2.5px dashed ${C.popov}` } }), '波波维奇亚上界'
         )
       )
+    );
+  }
 
-      /* Legend — no μ=157.5 */
-      , _react2.default.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '22px', marginTop: '12px', fontSize: '14px', color: '#444', fontWeight: '500' },}
-        , _react2.default.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' },}
-          , _react2.default.createElement('span', { style: { display: 'inline-block', width: '20px', height: '14px', background: '#fff', border: '2px solid #999', borderRadius: '3px' },} ), "偏白区"
-        )
-        , _react2.default.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' },}
-          , _react2.default.createElement('span', { style: { display: 'inline-block', width: '20px', height: '14px', background: C.black, borderRadius: '3px' },} ), "偏黑区"
-        )
-        , _react2.default.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' },}
-          , _react2.default.createElement('span', { style: { display: 'inline-block', width: '22px', borderTop: `3.5px solid ${C.parabola}` },} ), "临界抛物线"
-        )
-        , _react2.default.createElement('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' },}
-          , _react2.default.createElement('span', { style: { display: 'inline-block', width: '22px', borderTop: `2.5px dashed ${C.popov}` },} ), "波波维奇亚上界"
-        )
-      )
-    )
-  );
-} exports.default = PhaseDiagram;</script></head>
-  <body>
-  
-
-<div id="preview-app"></div></body></html>
+  const root = ReactDOM.createRoot(document.getElementById('preview-app'));
+  root.render(h(PhaseDiagram));
+})();
+</script>
+</body>
+</html>
